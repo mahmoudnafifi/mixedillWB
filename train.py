@@ -9,7 +9,6 @@ from tqdm import tqdm
 from src import wb_net
 import random
 from src import ops
-from src import discriminator as disc
 import torch.nn.functional as F
 
 try:
@@ -23,52 +22,21 @@ from src import dataset
 from torch.utils.data import DataLoader
 
 
-def train_net(net, device, data_dir, val_dir=None, epochs=140, disc=None,
+def train_net(net, device, data_dir, val_dir=None, epochs=140,
               batch_size=32, lr=0.001, l2reg=0.00001, grad_clip_value=0,
               chkpoint_period=10, val_freq=1, smooth_weight=0.01,
-              shuffle_order=True, patch_number=12, disc_weight=0.001,
-              disc_start=100, optimizer_algo='Adam', max_tr_files=0,
+              multiscale=False, wb_settings=None, shuffle_order=True,
+              patch_number=12,  optimizer_algo='Adam', max_tr_files=0,
               max_val_files=0, patch_size=128, model_name='WB_model',
               save_cp=True):
   """ Trains a network and saves the trained model in harddisk.
-
-  Args:
-    net: network object (wb_net.WBnet).
-    device: use 'cpu' or 'cuda' (string).
-
-    epochs: number of epochs; default is 100 epochs.
-    smooth_weight:
-
-    disc_weight:
-    patch_number:
-
-    disc_start:
-    disc:
-
-    batch_size: mini-batch size; default value is 32.
-    lr: learning rate; default value is 0.001.
-    l2reg: L2 regularization factor; default value is 0.00001.
-    grad_clip_value: threshold value for clipping gradients. If it is set to
-      0 (default) clipping gradient is not applied.
-    chkpoint_period: save a checkpoint every chkpoint_period epochs; default
-      value is 10.
-    val_freq: frequency to do the validation process; default value is 1.
-    optimizer_algo: Optimization algorithm: 'SGD' or 'Adam'; default is 'Adam'.
-    patch_size: Size of training patches; default is 128.
-    model_name: Name of the final trained model; default is 'WB_model'.
-    save_cp: boolean flag to save checkpoints during training; default is True.
   """
 
   dir_checkpoint = 'checkpoints_model/'  # check points directory
 
-  DISC_WEIGHT = disc_weight
-  SMOOTHNESS_WEIGHT = smooth_weight
-  DISC_START = disc_start
 
-  if disc is None:
-    use_disc = False
-  else:
-    use_disc = True
+  SMOOTHNESS_WEIGHT = smooth_weight
+
 
   input_files = dataset.Data.load_files(data_dir)
   random.shuffle(input_files)
@@ -89,21 +57,21 @@ def train_net(net, device, data_dir, val_dir=None, epochs=140, disc=None,
     if max_tr_files < len(input_files):
       input_files = input_files[:max_tr_files]
 
-  dataset.Data.assert_files(input_files)
-  dataset.Data.assert_files(val_files)
+  dataset.Data.assert_files(input_files, wb_settings=wb_settings)
+  dataset.Data.assert_files(val_files, wb_settings=wb_settings)
 
   train_set = dataset.Data(input_files, patch_size=patch_size,
-                           patch_number=patch_number,
-                           shuffle_order=shuffle_order)
+                           patch_number=patch_number, multiscale=multiscale,
+                           shuffle_order=shuffle_order, wb_settings=wb_settings)
 
   val_set = dataset.Data(val_files, patch_size=patch_size, patch_number=1,
-                         shuffle_order=shuffle_order)
+                         shuffle_order=shuffle_order, wb_settings=wb_settings)
 
   train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True,
-                              num_workers=0, pin_memory=True)
+                            num_workers=6, pin_memory=True)
 
   val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=True,
-                              num_workers=0, pin_memory=True)
+                          num_workers=6, pin_memory=True)
 
 
   if use_tb:  # if TensorBoard is used
@@ -115,8 +83,8 @@ def train_net(net, device, data_dir, val_dir=None, epochs=140, disc=None,
 
   logging.info(f'''Starting training:
         Model Name:            {model_name}
-        Use Discriminator (D): {use_disc}
         Epochs:                {epochs}
+        WB Settings:           {wb_settings}
         Batch size:            {batch_size}
         Patch per image:       {patch_number}
         Patch size:            {patch_size} x {patch_size}
@@ -134,19 +102,15 @@ def train_net(net, device, data_dir, val_dir=None, epochs=140, disc=None,
   if optimizer_algo == 'Adam':
     optimizer = optim.Adam(net.parameters(), lr=lr, betas=(0.9, 0.999),
                            weight_decay=l2reg)
-    if use_disc:
-      optimizer_disc = optim.Adam(disc.parameters(), lr=lr,
-                                    betas=(0.9, 0.999), weight_decay=l2reg)
+
 
   elif optimizer_algo == 'SGD':
     optimizer = optim.SGD(net.parameters(), lr=lr, weight_decay=l2reg)
-    if use_disc:
-      optimizer_disc = optim.SGD(disc.parameters(), lr=lr,
-                                   weight_decay=l2reg)
+
   else:
     raise NotImplementedError
 
-  x_kernel, y_kernel = ops.get_sobel_kernel(device)
+  x_kernel, y_kernel = ops.get_sobel_kernel(device, chnls=len(wb_settings))
 
   for epoch in range(epochs):
 
@@ -154,9 +118,6 @@ def train_net(net, device, data_dir, val_dir=None, epochs=140, disc=None,
     epoch_loss = 0
     epoch_smoothness_loss = 0
     epoch_rec_loss = 0
-    if use_disc:
-      epoch_disc_loss = 0
-      epoch_gen_loss = 0
 
 
     with tqdm(total=len(train_set), desc=f'Epoch {epoch + 1} / {epochs}',
@@ -168,9 +129,7 @@ def train_net(net, device, data_dir, val_dir=None, epochs=140, disc=None,
         gt = gt.to(device=device, dtype=torch.float32)
         rec_loss = 0
         smoothness_loss = 0
-        if use_disc:
-          gen_loss = 0
-          disc_loss = 0
+
         for p in range(img.shape[1]):
           patch = img[:, p, :, :, :]
           gt_patch = gt[:, p, :, :, :]
@@ -181,16 +140,10 @@ def train_net(net, device, data_dir, val_dir=None, epochs=140, disc=None,
               torch.sum(F.conv2d(weights, x_kernel, stride=1) ** 2) +
               torch.sum(F.conv2d(weights, y_kernel, stride=1) ** 2))
 
-          if use_disc and (epoch + 1) >= DISC_START:
-            gen_loss += DISC_WEIGHT * disc(result).mean()
 
         rec_loss = rec_loss / img.shape[1]
         smoothness_loss = smoothness_loss / img.shape[1]
-        if use_disc and (epoch + 1) >= DISC_START:
-          gen_loss = gen_loss / img.shape[1]
-          loss = rec_loss + smoothness_loss + gen_loss
-        else:
-          loss = rec_loss + smoothness_loss
+        loss = rec_loss + smoothness_loss
 
         py_loss = loss.item()
         py_rec_loss = rec_loss.item()
@@ -201,33 +154,12 @@ def train_net(net, device, data_dir, val_dir=None, epochs=140, disc=None,
         epoch_rec_loss += py_rec_loss
         epoch_loss += py_loss
 
-        if use_disc and (epoch + 1) >= DISC_START:
-          py_gen_loss = gen_loss.item()
-          epoch_gen_loss += py_gen_loss
+
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        if use_disc and (epoch + 1) >= DISC_START:
-          for p in range(img.shape[1]):
-            patch = img[:, p, :, :, :]
-            gt_patch = gt[:, p, :, :, :]
-            result, weights = net(patch)
-            d_fake_output = disc(result.clone().detach())
-            d_real_output = disc(gt_patch)
-
-            disc_loss += (F.relu(1 + d_real_output).mean() +
-                          (F.relu(1 - d_fake_output)).mean())
-
-          disc_loss = disc_loss / img.shape[1]
-
-          optimizer_disc.zero_grad()
-          disc_loss.backward()
-          optimizer_disc.step()
-
-          py_disc_loss = disc_loss.item()
-          epoch_disc_loss += py_disc_loss
 
         if grad_clip_value > 0:
           torch.nn.utils.clip_grad_value_(net.parameters(), grad_clip_value)
@@ -241,11 +173,7 @@ def train_net(net, device, data_dir, val_dir=None, epochs=140, disc=None,
           writer.add_scalar('Rec Loss/train', py_rec_loss, global_step)
           writer.add_scalar('Smoothness Loss/train', py_smoothness_loss,
                             global_step)
-          if use_disc and (epoch + 1) >= DISC_START:
-            writer.add_scalar('Gen Loss/train', py_gen_loss,
-                              global_step)
-            writer.add_scalar('Disc Loss/train', py_disc_loss,
-                              global_step)
+
           writer.add_images('Input (1)', patch[:, 0:3, :, :], global_step)
           writer.add_images('Weight (1)',
                             torch.unsqueeze(vis_weights[:, 0, :, :], dim=1),
@@ -254,46 +182,43 @@ def train_net(net, device, data_dir, val_dir=None, epochs=140, disc=None,
           writer.add_images('Weight (2)',
                             torch.unsqueeze(vis_weights[:, 1, :, :], dim=1),
                             global_step)
-          writer.add_images('Input (3)', patch[:, 6:, :, :], global_step)
+          writer.add_images('Input (3)', patch[:, 6:9, :, :], global_step)
           writer.add_images('Weight (3)',
                             torch.unsqueeze(vis_weights[:, 2, :, :], dim=1),
                             global_step)
+          if vis_weights.shape[1] == 4:
+            writer.add_images('Input (4)', patch[:, 9:12, :, :], global_step)
+            writer.add_images('Weight (4)',
+                              torch.unsqueeze(vis_weights[:, 3, :, :], dim=1),
+                              global_step)
+          if vis_weights.shape[1] == 5:
+            writer.add_images('Input (4)', patch[:, 9:12, :, :], global_step)
+            writer.add_images('Weight (4)',
+                              torch.unsqueeze(vis_weights[:, 3, :, :], dim=1),
+                              global_step)
+            writer.add_images('Input (5)', patch[:, 12:, :, :], global_step)
+            writer.add_images('Weight (5)',
+                              torch.unsqueeze(vis_weights[:, 4, :, :], dim=1),
+                              global_step)
+
           writer.add_images('Result', result, global_step)
           writer.add_images('GT', gt_patch, global_step)
 
         pbar.update(np.ceil(img.shape[0]))
 
-        if use_disc and (epoch + 1) >= DISC_START:
-          pbar.set_postfix(**{'Total loss (batch)': py_loss},
-                           **{'Rec. loss (batch)': py_rec_loss},
-                           **{'Smoothness loss (batch)': py_smoothness_loss},
-                           **{'Gen loss': py_gen_loss},
-                           **{'Disc loss': py_disc_loss})
-        else:
-          pbar.set_postfix(**{'Total loss (batch)': py_loss},
-                           **{'Rec. loss (batch)': py_rec_loss},
-                           **{'Smoothness loss (batch)': py_smoothness_loss},
-                           )
+        pbar.set_postfix(**{'Total loss (batch)': py_loss},
+                         **{'Rec. loss (batch)': py_rec_loss},
+                         **{'Smoothness loss (batch)': py_smoothness_loss}
+                         )
 
         global_step += 1
 
     epoch_loss = epoch_loss / (len(train_loader))
     epoch_rec_loss = epoch_rec_loss / (len(train_loader))
     epoch_smoothness_loss = epoch_smoothness_loss / (len(train_loader))
-    if use_disc and (epoch + 1) >= DISC_START:
-      epoch_disc_loss = epoch_disc_loss / (len(train_loader))
-      epoch_gen_loss = epoch_gen_loss / (len(train_loader))
-
-      logging.info(f'{model_name} - Epoch loss: = {epoch_loss}, '
-                   f'Rec. loss = {epoch_rec_loss}, '
-                   f'Smoothness loss = {epoch_smoothness_loss}, '
-                   f'Gen loss = {epoch_gen_loss}, '
-                   f'Disc loss = {epoch_disc_loss}')
-
-    else:
-      logging.info(f'{model_name} - Epoch loss: = {epoch_loss}, '
-                   f'Rec. loss = {epoch_rec_loss}, '
-                   f'Smoothness loss = {epoch_smoothness_loss}')
+    logging.info(f'{model_name} - Epoch loss: = {epoch_loss}, '
+                 f'Rec. loss = {epoch_rec_loss}, '
+                 f'Smoothness loss = {epoch_smoothness_loss}')
 
     if (epoch + 1) % val_freq == 0:
       logging.info('Validation...')
@@ -357,6 +282,22 @@ def validation(net, loader, writer, step):
       writer.add_images('Weight (3) [val]',
                         torch.unsqueeze(vis_weights[:, 2, :, :], dim=1),
                         step)
+
+      if vis_weights.shape[1] == 4:
+        writer.add_images('Input (4) [val]', img[:, 9:12, :, :], step)
+        writer.add_images('Weight (4) [val]',
+                          torch.unsqueeze(vis_weights[:, 3, :, :], dim=1),
+                          step)
+      if vis_weights.shape[1] == 5:
+        writer.add_images('Input (4) [val]', img[:, 9:12, :, :], step)
+        writer.add_images('Weight (4) [val]',
+                          torch.unsqueeze(vis_weights[:, 3, :, :], dim=1),
+                          step)
+        writer.add_images('Input (5) [val]', img[:, 12:, :, :], step)
+        writer.add_images('Weight (5) [val]',
+                          torch.unsqueeze(vis_weights[:, 4, :, :], dim=1),
+                          step)
+
       writer.add_images('Result [val]', result, step)
       writer.add_images('GT [val]', gt, step)
 
@@ -379,10 +320,10 @@ def get_args():
                       help='Number of epochs', dest='epochs')
 
   parser.add_argument('-s', '--patch-size', dest='patch_size', type=int,
-                      default=128, help='Size of input training patches')
+                      default=64, help='Size of input training patches')
 
   parser.add_argument('-b', '--batch-size', metavar='B', type=int, nargs='?',
-                      default=16, help='Batch size', dest='batch_size')
+                      default=8, help='Batch size', dest='batch_size')
 
   parser.add_argument('-pn', '--patch-number', type=int, default=4,
                       help='number of patches per trainig image',
@@ -392,16 +333,20 @@ def get_args():
                       default='Adam', help='Adam or SGD')
 
   parser.add_argument('-mtf', '--max-tr-files', dest='max_tr_files', type=int,
-                      default=1, help='max number of training files; default '
+                      default=0, help='max number of training files; default '
                                       'is 0 which uses all files')
 
   parser.add_argument('-mvf', '--max-val-files', dest='max_val_files', type=int,
-                      default=1, help='max number of validation files; '
+                      default=0, help='max number of validation files; '
                                        'default is 0 which uses all files')
 
   parser.add_argument('-nrm', '--normalization', dest='norm', type=bool,
-                      default=True,
+                      default=False,
                       help='Apply BN in network')
+
+  parser.add_argument('-msc', '--multi-scale', dest='multiscale', type=bool,
+                      default=False,
+                      help='Multi-scale training samples')
 
   parser.add_argument('-lr', '--learning-rate', metavar='LR', type=float,
                       nargs='?', default=1e-4, help='Learning rate', dest='lr')
@@ -413,14 +358,8 @@ def get_args():
   parser.add_argument('-sw', '--smoothness-weight', dest='smoothness_weight',
                       type=float, default=100.0, help='smoothness weight')
 
-  parser.add_argument('-dw', '--disc-weight', dest='disc_weight', type=float,
-                      default=0.005, help='Discriminator loss weight')
-
-  parser.add_argument('-ud', '--use-discriminator', dest='use_discriminator',
-                      type=bool, default=False, help='Use discriminators')
-
-  parser.add_argument('-ds', '--disc-start', dest='disc_start', type=int,
-                      default=0, help='Discriminator start epoch number')
+  parser.add_argument('-wbs', '--wb-settings', dest='wb_settings', nargs='+',
+                      default=['D', 'S', 'T', 'F', 'C'])
 
   parser.add_argument('-l', '--load', dest='load', type=bool, default=False,
                       help='Load model from a .pth file')
@@ -458,7 +397,7 @@ def get_args():
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-  logging.info('Training Mixed WB correction')
+  logging.info('Training Mixed-Ill WB correction')
   args = get_args()
   device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
   if device.type != 'cpu':
@@ -466,8 +405,8 @@ if __name__ == '__main__':
 
   logging.info(f'Using device {device}')
 
-  net = wb_net.WBnet(device=device, norm=args.norm)
-
+  net = wb_net.WBnet(device=device, norm=args.norm, inchnls=3 * len(
+    args.wb_settings))
   if args.load:
     net.load_state_dict(
       torch.load(args.model_location, map_location=device)
@@ -477,13 +416,7 @@ if __name__ == '__main__':
   net.to(device=device)
 
 
-  if args.use_discriminator:
-    disc = disc.Discriminator(args.patch_size)
-    disc.to(device=device)
-    postfix = f'_p_{args.patch_size}_w_disc'
-  else:
-    disc = None
-    postfix = f'_p_{args.patch_size}'
+  postfix = f'_p_{args.patch_size}'
 
   if args.norm:
     postfix += f'_w_BN'
@@ -494,17 +427,20 @@ if __name__ == '__main__':
   if args.smoothness_weight == 0:
     postfix += f'_wo_smoothing'
 
+  for wb_setting in args.wb_settings:
+    postfix += f'_{wb_setting}'
+
   model_name = args.model_name + postfix
 
 
   try:
-    train_net(net=net, device=device, data_dir=args.trdir, disc=disc,
+    train_net(net=net, device=device, data_dir=args.trdir,
               patch_number=args.patch_number,
-              disc_weight=args.disc_weight,
+              multiscale=args.multiscale,
               smooth_weight=args.smoothness_weight,
               max_tr_files=args.max_tr_files,
               max_val_files=args.max_val_files,
-              disc_start=args.disc_start,
+              wb_settings=args.wb_settings,
               shuffle_order=args.shuffle_order,
               epochs=args.epochs,
               batch_size=args.batch_size, lr=args.lr,

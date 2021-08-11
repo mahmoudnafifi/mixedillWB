@@ -13,13 +13,6 @@ class WBnet(nn.Module):
   def __init__(self, inchnls=9, initialchnls=8, rows=4, columns=6,
                norm=False, device='cuda'):
     """ Network constructor.
-
-    Args:
-      inchnls: input channels; default is 9.
-      initialchnls: initial number of feature channels; default is 16.
-      rows: number of rows; default is 3.
-      columns: number of columns; default is 6 (should be an even number).
-      norm: apply batch norm; default is False.
     """
     self.outchnls = int(inchnls/3)
     self.inchnls = inchnls
