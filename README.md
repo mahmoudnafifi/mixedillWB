@@ -1,13 +1,44 @@
-# mixedillWB
+# Auto White-Balance Correction for Mixed-Illuminant Scenes
+
+[Mahmoud Afifi](https://sites.google.com/view/mafifi), 
+[Marcus A. Brubaker](https://mbrubake.github.io/), 
+and [Michael S. Brown](http://www.cse.yorku.ca/~mbrown/)
+
+York University  &nbsp;&nbsp; 
+
+
+
+
+
+Reference code for the paper [Auto White-Balance Correction for Mixed-Illuminant Scenes.]() Mahmoud Afifi, Marcus A. Brubaker, and Michael S. Brown. If you use this code or our dataset, please cite our paper:
+```
+@article{afifi2021awb,
+  title={Auto White-Balance Correction for Mixed-Illuminant Scenes},
+  author={Afifi, Mahmoud and Brubaker, Marcus A. and Brown, Michael S.},
+  journal={arXiv preprint arXiv:2011.11890},
+  year={2021}
+}
+```
 
 
 ![teaser](https://user-images.githubusercontent.com/37669469/129296945-ae85e148-ff4c-4e94-8887-0313a477e3e4.jpg)
 
 
-Our method is built on top of the modified camera ISP proposed [here](https://github.com/mahmoudnafifi/ColorTempTuning). This repo provides the source code of our deep network proposed in our [paper](). Trained models are provided in [./models](https://github.com/mahmoudnafifi/mixedillWB/tree/main/models). 
 
 
-## Training
+The vast majority of white-balance algorithms assume a single light source illuminates the scene; however, real scenes often have mixed lighting conditions. Our method presents an effective auto white-balance method to deal with such mixed-illuminant scenes. A unique departure from conventional auto white balance, our method does not require illuminant estimation, as is the case in traditional camera auto white-balance modules. Instead, our method proposes to render the captured scene with a small set of predefined white-balance settings. Given this set of rendered images, our method learns to estimate weighting maps that are used to blend the rendered images to generate the final corrected image. 
+
+
+![method](https://user-images.githubusercontent.com/37669469/129389871-b779ea09-4be9-4137-b022-30fe43632958.jpg)
+
+
+
+Our method was built on top of the modified camera ISP proposed [here](https://github.com/mahmoudnafifi/ColorTempTuning). This repo provides the source code of our deep network proposed in our [paper](). 
+
+## Code
+
+
+### Training
 
 To start training, you should first download the [Rendered WB dataset](https://github.com/mahmoudnafifi/WB_sRGB/), which includes ~65K sRGB images rendered with different color temperatures. Each image in this dataset has the corresponding ground-truth sRGB image that was rendered with an accurate white-balance correction. From this dataset, we selected 9,200 training images that were rendered with the "camera standard" photofinishing and with the following white-balance settings: tungsten (or incandescent), fluorescent, daylight, cloudy, and shade. To get this set, you need to only use images ends with the following parts: `_T_CS.png`, `_F_CS.png`, `_D_CS.png`, `_C_CS.png`, `_S_CS.png` and their associated ground-truth image (that ends with `_G_AS.png`). 
 
@@ -21,8 +52,9 @@ where, `WB SETTING i` should be one of the following settings: `T`, `F`, `D`, `C
 
 `python train.py --wb-settings T D S --model-name <MODEL NAME>`
 
-## Testing
-To test trained models, use the following command:
+### Testing
+
+Our pre-trained models are provided in [./models](https://github.com/mahmoudnafifi/mixedillWB/tree/main/models). To test a pre-trained model, use the following command:
 
 `python test.py --wb-settings <WB SETTING 1> <WB SETTING 2> ... <WB SETTING N> --model-name <MODEL NAME> --testing-dir <TEST IMAGE DIRECTORY> --outdir <RESULT DIRECTORY> --gpu <GPU NUMBER>`
 
@@ -69,4 +101,15 @@ We generated a synthetic testing set to quantitatively evaluate white-balance me
 You can download our test set from one of the following links:
 * [8-bit JPG images](https://ln4.sync.com/dl/327ce3f30/jd7rvtf6-7tgz43nf-e9ahtm3j-tv8uzxwe)
 * [16-bit PNG images](https://ln4.sync.com/dl/02f0af5f0/4hhpe83r-8ymvskfz-naqpdrqt-nxvq8h4x)
+
+
+## Related Research Projects
+- [C5](https://github.com/mahmoudnafifi/C5): A self-calibration method for cross-camera illuminant estimation (ICCV 2021).
+- [Deep White-Balance Editing](https://github.com/mahmoudnafifi/Deep_White_Balance): A multi-task deep learning model for post-capture white-balance correction and editing (CVPR 2020).
+- [Interactive White Balancing](https://github.com/mahmoudnafifi/Interactive_WB_correction): A simple method to link the nonlinear white-balance correction to the user's selected colors to allow interactive white-balance manipulation (CIC 2020).
+- [White-Balance Augmenter](https://github.com/mahmoudnafifi/WB_color_augmenter): An augmentation technique based on camera WB errors (ICCV 2019).
+- [When Color Constancy Goes Wrong](https://github.com/mahmoudnafifi/WB_sRGB): The first work to directly address the problem of incorrectly white-balanced images; requires a small memory overhead and it is fast (CVPR 2019).
+- [Color temperature tuning](https://github.com/mahmoudnafifi/ColorTempTuning): A modified camera ISP to allow white-balance editing in post-capture time (CIC 2019).
+- [SIIE](https://github.com/mahmoudnafifi/SIIE): A learning-based sensor-independent illumination estimation method (BMVC 2019).
+
 
