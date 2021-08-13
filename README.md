@@ -26,7 +26,7 @@ Reference code for the paper [Auto White-Balance Correction for Mixed-Illuminant
 
 
 
-The vast majority of white-balance algorithms assume a single light source illuminates the scene; however, real scenes often have mixed lighting conditions. Our method presents an effective auto white-balance method to deal with such mixed-illuminant scenes. A unique departure from conventional auto white balance, our method does not require illuminant estimation, as is the case in traditional camera auto white-balance modules. Instead, our method proposes to render the captured scene with a small set of predefined white-balance settings. Given this set of rendered images, our method learns to estimate weighting maps that are used to blend the rendered images to generate the final corrected image. 
+The vast majority of white-balance algorithms assume a single light source illuminates the scene; however, real scenes often have mixed lighting conditions. Our method presents an effective auto white-balance method to deal with such mixed-illuminant scenes. A unique departure from conventional auto white balance, our method does not require illuminant estimation, as is the case in traditional camera auto white-balance modules. Instead, our method proposes to render the captured scene with a small set of predefined white-balance settings. Given this set of small rendered images, our method learns to estimate weighting maps that are used to blend the rendered images to generate the final corrected image. 
 
 
 ![method](https://user-images.githubusercontent.com/37669469/129389871-b779ea09-4be9-4137-b022-30fe43632958.jpg)
@@ -42,7 +42,7 @@ Our method was built on top of the modified camera ISP proposed [here](https://g
 
 To start training, you should first download the [Rendered WB dataset](https://github.com/mahmoudnafifi/WB_sRGB/), which includes ~65K sRGB images rendered with different color temperatures. Each image in this dataset has the corresponding ground-truth sRGB image that was rendered with an accurate white-balance correction. From this dataset, we selected 9,200 training images that were rendered with the "camera standard" photofinishing and with the following white-balance settings: tungsten (or incandescent), fluorescent, daylight, cloudy, and shade. To get this set, you need to only use images ends with the following parts: `_T_CS.png`, `_F_CS.png`, `_D_CS.png`, `_C_CS.png`, `_S_CS.png` and their associated ground-truth image (that ends with `_G_AS.png`). 
 
-Copy all training input images in `./data/images` and copy all ground truth images in `./data/ground truth images`. Note that if you are going to train on a subset of these white-balance settings (e.g., tungsten, daylight, and shade), there is no need to have the additional white-balance settings in your training image directory. 
+Copy all training input images to `./data/images` and copy all ground truth images to `./data/ground truth images`. Note that if you are going to train on a subset of these white-balance settings (e.g., tungsten, daylight, and shade), there is no need to have the additional white-balance settings in your training image directory. 
 
 Then, run the following command:
 
@@ -84,9 +84,9 @@ Qualitative comparisons of our results with the camera auto white-balance correc
 ![qualitative_5k_dataset](https://user-images.githubusercontent.com/37669469/129297898-b33ae6f9-db8f-4750-b8f9-2de00ee809ad.jpg)
 
 
-Our method has a limitation in that it requires these tiny images to work (this should be given by the modified camera ISP pipeline used in our [paper]()). To process images that have already been rendered by the camera (e.g., JPEG images), we can employ one of the sRGB white-balance editing methods to synthetically generate our tiny images with the target predefined WB set in post-capture time. 
+Our method has a limitation in that it requires the additional small images, rendered with our predefined set of white-balance settings, to work properly (this should be given by the modified camera ISP pipeline used in our [paper]()). To process images that have already been rendered by the camera (e.g., JPEG images), we can employ one of the sRGB white-balance editing methods to synthetically generate our small images with the target predefined WB set in post-capture time. 
 
-In the shown figure below, we illustrate this idea by employing the [deep white-balance editing](https://github.com/mahmoudnafifi/Deep_White_Balance) to generate the tiny images of a given sRGB camera-rendered image taken from Flickr. As shown, our method produces a better result when comparing to the camera-rendered image (i.e., traditional camera AWB) and the deep WB result for post-capture WB correction. If the input image does not have the associated tiny images (as described above), the provided source code runs automatically [deep white-balance editing](https://github.com/mahmoudnafifi/Deep_White_Balance) for you to get the tiny images. 
+In the shown figure below, we illustrate this idea by employing the [deep white-balance editing](https://github.com/mahmoudnafifi/Deep_White_Balance) to generate the small images of a given sRGB camera-rendered image taken from Flickr. As shown, our method produces a better result when comparing to the camera-rendered image (i.e., traditional camera AWB) and the deep WB result for post-capture WB correction. If the input image does not have the associated small images (as described above), the provided source code runs automatically [deep white-balance editing](https://github.com/mahmoudnafifi/Deep_White_Balance) for you to get the small images. 
 
 ![qualitative_flickr](https://user-images.githubusercontent.com/37669469/129298104-9ec5186b-092f-4906-a6a4-ca8072b5b1a3.jpg)
 
