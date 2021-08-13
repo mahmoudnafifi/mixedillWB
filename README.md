@@ -29,7 +29,8 @@ Reference code for the paper [Auto White-Balance Correction for Mixed-Illuminant
 The vast majority of white-balance algorithms assume a single light source illuminates the scene; however, real scenes often have mixed lighting conditions. Our method presents an effective auto white-balance method to deal with such mixed-illuminant scenes. A unique departure from conventional auto white balance, our method does not require illuminant estimation, as is the case in traditional camera auto white-balance modules. Instead, our method proposes to render the captured scene with a small set of predefined white-balance settings. Given this set of small rendered images, our method learns to estimate weighting maps that are used to blend the rendered images to generate the final corrected image. 
 
 
-![method](https://user-images.githubusercontent.com/37669469/129389871-b779ea09-4be9-4137-b022-30fe43632958.jpg)
+![method](https://user-images.githubusercontent.com/37669469/129400547-5786d0b0-6829-4ea6-812d-ccb8aef47bf8.jpg)
+
 
 
 
