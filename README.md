@@ -104,6 +104,11 @@ You can download our test set from one of the following links:
 * [16-bit PNG images](https://ln4.sync.com/dl/02f0af5f0/4hhpe83r-8ymvskfz-naqpdrqt-nxvq8h4x)
 
 
+
+## Acknowledgement
+A big thanks to Mohammed Hossam for his help in generating our synthetic test set. 
+
+
 ## Related Research Projects
 - [C5](https://github.com/mahmoudnafifi/C5): A self-calibration method for cross-camera illuminant estimation (ICCV 2021).
 - [Deep White-Balance Editing](https://github.com/mahmoudnafifi/Deep_White_Balance): A multi-task deep learning model for post-capture white-balance correction and editing (CVPR 2020).
