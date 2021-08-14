@@ -109,6 +109,10 @@ You can download our test set from one of the following links:
 A big thanks to Mohammed Hossam for his help in generating our synthetic test set. 
 
 
+## Commercial Use
+This software and data are provided for research purposes only and CANNOT be used for commercial purposes.
+
+
 ## Related Research Projects
 - [C5](https://github.com/mahmoudnafifi/C5): A self-calibration method for cross-camera illuminant estimation (ICCV 2021).
 - [Deep White-Balance Editing](https://github.com/mahmoudnafifi/Deep_White_Balance): A multi-task deep learning model for post-capture white-balance correction and editing (CVPR 2020).
