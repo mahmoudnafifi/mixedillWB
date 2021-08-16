@@ -85,7 +85,7 @@ Qualitative comparisons of our results with the camera auto white-balance correc
 ![qualitative_5k_dataset](https://user-images.githubusercontent.com/37669469/129297898-b33ae6f9-db8f-4750-b8f9-2de00ee809ad.jpg)
 
 
-Our method has a limitation in that it requires the additional small images, rendered with our predefined set of white-balance settings, to work properly (this should be given by the modified camera ISP pipeline used in our [paper]()). To process images that have already been rendered by the camera (e.g., JPEG images), we can employ one of the sRGB white-balance editing methods to synthetically generate our small images with the target predefined WB set in post-capture time. 
+Our method has the limitation of requiring a modification to an ISP to render the additional small images with our predefined set of white-balance settings. To process images that have already been rendered by the camera (e.g., JPEG images), we can employ one of the sRGB white-balance editing methods to synthetically generate our small images with the target predefined WB set in post-capture time. 
 
 In the shown figure below, we illustrate this idea by employing the [deep white-balance editing](https://github.com/mahmoudnafifi/Deep_White_Balance) to generate the small images of a given sRGB camera-rendered image taken from Flickr. As shown, our method produces a better result when comparing to the camera-rendered image (i.e., traditional camera AWB) and the deep WB result for post-capture WB correction. If the input image does not have the associated small images (as described above), the provided source code runs automatically [deep white-balance editing](https://github.com/mahmoudnafifi/Deep_White_Balance) for you to get the small images. 
 
