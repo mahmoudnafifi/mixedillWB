@@ -10,12 +10,12 @@ York University  &nbsp;&nbsp;
 
 
 
-Reference code for the paper [Auto White-Balance Correction for Mixed-Illuminant Scenes.]() Mahmoud Afifi, Marcus A. Brubaker, and Michael S. Brown. If you use this code or our dataset, please cite our paper:
+Reference code for the paper [Auto White-Balance Correction for Mixed-Illuminant Scenes.](https://arxiv.org/abs/2109.08750) Mahmoud Afifi, Marcus A. Brubaker, and Michael S. Brown. If you use this code or our dataset, please cite our paper:
 ```
 @article{afifi2021awb,
   title={Auto White-Balance Correction for Mixed-Illuminant Scenes},
   author={Afifi, Mahmoud and Brubaker, Marcus A. and Brown, Michael S.},
-  journal={arXiv preprint arXiv:2011.11890},
+  journal={arXiv preprint arXiv:2109.08750},
   year={2021}
 }
 ```
@@ -33,7 +33,7 @@ The vast majority of white-balance algorithms assume a single light source illum
 
 
 
-Our method was built on top of the modified camera ISP proposed [here](https://github.com/mahmoudnafifi/ColorTempTuning). This repo provides the source code of our deep network proposed in our [paper](). 
+Our method was built on top of the modified camera ISP proposed [here](https://github.com/mahmoudnafifi/ColorTempTuning). This repo provides the source code of our deep network proposed in our [paper](https://arxiv.org/abs/2109.08750). 
 
 ## Code
 
@@ -48,7 +48,7 @@ Then, run the following command:
 
 `python train.py --wb-settings <WB SETTING 1> <WB SETTING 2> ... <WB SETTING N> --model-name <MODEL NAME> --patch-size <TRAINING PATCH SIZE> --batch-size <MINI BATCH SIZE> --gpu <GPU NUMBER>`
 
-where, `WB SETTING i` should be one of the following settings: `T`, `F`, `D`, `C`, `S`, which refer to tungsten, fluorescent, daylight, cloudy, and shade, respectively. Note that daylight (`D`) should be one of the white-balance settings. For instance, to train a model using tungsten and shade white-balance settings + daylight white balance, which is the fixed setting for the high-resolution image (as described in the [paper]()), you can use this command:
+where, `WB SETTING i` should be one of the following settings: `T`, `F`, `D`, `C`, `S`, which refer to tungsten, fluorescent, daylight, cloudy, and shade, respectively. Note that daylight (`D`) should be one of the white-balance settings. For instance, to train a model using tungsten and shade white-balance settings + daylight white balance, which is the fixed setting for the high-resolution image (as described in the [paper](https://arxiv.org/abs/2109.08750)), you can use this command:
 
 `python train.py --wb-settings T D S --model-name <MODEL NAME>`
 
