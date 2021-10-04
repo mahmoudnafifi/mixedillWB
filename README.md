@@ -12,11 +12,11 @@ York University  &nbsp;&nbsp;
 
 Reference code for the paper [Auto White-Balance Correction for Mixed-Illuminant Scenes.](https://arxiv.org/abs/2109.08750) Mahmoud Afifi, Marcus A. Brubaker, and Michael S. Brown. If you use this code or our dataset, please cite our paper:
 ```
-@article{afifi2021awb,
+@inproceedings{afifi2022awb,
   title={Auto White-Balance Correction for Mixed-Illuminant Scenes},
   author={Afifi, Mahmoud and Brubaker, Marcus A. and Brown, Michael S.},
-  journal={arXiv preprint arXiv:2109.08750},
-  year={2021}
+  booktitle={IEEE Winter Conference on Applications of Computer Vision (WACV)},
+  year={2022}
 }
 ```
 
