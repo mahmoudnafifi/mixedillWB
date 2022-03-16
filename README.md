@@ -72,6 +72,15 @@ Experimentally, we found that when ensembling is used it is recommended to use a
 
 Our network has a [GridNet](https://arxiv.org/pdf/1707.07958.pdf)-like architecture. Our network consists of six columns and four rows. As shown in the figure below, our network includes three main units, which are: the residual unit (shown in blue), the downsampling unit (shown in green), and the upsampling unit (shown in yellow). If you are looking for the Pythorch implementation of GridNet, you can check [src/gridnet.py](https://github.com/mahmoudnafifi/mixedillWB/blob/main/src/gridnet.py).
 
+
+#### UPDATE: There is a bug in the decoder forward function, it makes the decoder always has a single layer in depth. Please refer to this [isse](https://github.com/mahmoudnafifi/mixedillWB/issues/4) for more details. To fix it, please update the code in lines [149](https://github.com/mahmoudnafifi/mixedillWB/blob/aeee3b8ab16e9d8e8d462e7ad32f0cb1a91b1654/src/gridnet.py#L149)-[150](https://github.com/mahmoudnafifi/mixedillWB/blob/aeee3b8ab16e9d8e8d462e7ad32f0cb1a91b1654/src/gridnet.py#L150) with the following code:
+```
+        if j == 0:
+          x_latent = latent_forward[k]
+        x_latent = res_blck(x_latent)
+```
+#### Thanks [denkorzh](https://github.com/denkorzh) for catching this mistake. 
+
 ![net](https://user-images.githubusercontent.com/37669469/129297286-b82441e3-fe02-4900-9b07-3bd0928731d2.jpg)
 
 ## Results
